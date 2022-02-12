@@ -17,7 +17,7 @@
   </style>
   <!-- Modal -->
   <div class="modal fade" id="video-record-modal" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-md">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="staticBackdropLabel">Record Video</h5>
@@ -28,7 +28,7 @@
         <div class="modal-body">
           <video class="video-display" autoplay playsinline muted volume="1" width="100%"></video>          
         </div>
-        <p class="upload-status text-right"></p>
+        <p class="upload-status text-center"></p>
         <div class="progress d-none">
             <div class="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
           </div>
