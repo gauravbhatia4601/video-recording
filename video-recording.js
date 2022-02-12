@@ -131,7 +131,6 @@ stopRecording.addEventListener('click',function(){
                     button.recordingEndedCallback(url);
                     stopStream();
                     saveVideo(button.recordRTC);
-                    // saveToDiskOrOpenNewTab(button.recordRTC[0]);
                     return;
                 }
 
@@ -145,8 +144,6 @@ stopRecording.addEventListener('click',function(){
             button.recordRTC.stopRecording(function(url) {
                 button.recordingEndedCallback(url);
                 stopStream();
-
-                // saveToDiskOrOpenNewTab(button.recordRTC);
                 saveVideo(button.recordRTC);
             });
         }
@@ -181,14 +178,9 @@ function saveVideo(recordRTC){
         jQuery('.progress').removeClass('d-none');
         uploadToServer(recordRTC, function(progress, fileURL) {
             if(progress === 'ended') {
-                button.disabled = false;
-                button.innerHTML = 'Click to download from server';
-                button.onclick = function() {
-                    window.open(fileURL);
-                };
+                    
                 return;
             }
-            button.innerHTML = progress;
         });
     });
 }
@@ -217,8 +209,14 @@ fileName += '.webm';
 
 function makeXMLHttpRequest(url, data, callback) {
     var request = new XMLHttpRequest();
-    request.onreadystatechange = function() {
+    request.onreadystatechange = function(result) {
         if (request.readyState == 4 && request.status == 200) {
+            let response = JSON.parse(this.responseText);
+            if(response.status == 'OK'){
+                jQuery('.upload-status').text(response.message);
+            }else if(response.hasOwnProperty('error')){
+                jQuery('.upload-status').text(response.error);
+            }
             callback('upload-ended');
         }
     };
@@ -229,7 +227,6 @@ function makeXMLHttpRequest(url, data, callback) {
 
     request.upload.onprogress = function(event) {
         jQuery('.progress-bar').css("width",Math.round(event.loaded / event.total * 100) + "%");
-        console.log(Math.round(event.loaded / event.total * 100) + "%");
         jQuery('.upload-status').text(Math.round(event.loaded / event.total * 100) + "%");
         jQuery('.progress-bar').attr("aria-valuenow",Math.round(event.loaded / event.total * 100));
     };
@@ -252,6 +249,6 @@ function makeXMLHttpRequest(url, data, callback) {
         console.error('XMLHttpRequest aborted', error);
     };
 
-    request.open('POST', url);
+    request.open('POST', url, true);
     request.send(data);
 }
