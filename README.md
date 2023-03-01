@@ -8,5 +8,5 @@ This sample of code is used to record video-audio in web browser using RecordRTC
 
 # To Run
 1. Create upload folder if not created due to permission issue.
-2. Open index file in broaser.
+2. Open index file in browser.
 
