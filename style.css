@@ -1,0 +1,95 @@
+@keyframes gradientAnimation {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    50% {
+      background-position: 100% 50%;
+    }
+
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .animated-gradient {
+    background: linear-gradient(270deg, #f59898, #f8d58b, #8ce1f4, #facaf4);
+    background-size: 800% 800%;
+    animation: gradientAnimation 20s ease infinite;
+  }
+
+  .progress-bar {
+    margin: 0 16px 0 !important;
+  }
+
+  .inputs>button,
+  select {
+    margin: 0 10px;
+  }
+
+  canvas {
+    display: block;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    height: 60px;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      transform: translate(-50%, -50%) scale(0.95);
+      opacity: 0;
+    }
+
+    to {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes scaleOut {
+    from {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+
+    to {
+      transform: translate(-50%, -50%) scale(0.95);
+      opacity: 0;
+    }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .fade-out {
+    animation: fadeOut 0.3s ease-in;
+  }
+
+  .scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  .scale-out {
+    animation: scaleOut 0.3s ease-in;
+  }
