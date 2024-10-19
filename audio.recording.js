@@ -1,15 +1,21 @@
 //this file contains the code to record audio elements
 
+import { App } from './app.js'
+
 export class AudioRecorder {
 
-    recordedChunks = [];
-    
+    stream = null
+
+    audioContext = null
+
     mediaRecorderMimeTypes = [
-        'audio/ogg; codecs=opus',
-        "audio/webm; codecs=opus"
+        'audio/ogg;codecs=opus',
+        "audio/webm;codecs=opus",
+        "audio/wav"
     ];
 
     constructor() {
+        this.recordedChunks = [];
         if (!navigator.mediaDevices) {
             console.log('Media Device are not available');
             alert('Media Device are not available');
@@ -19,36 +25,38 @@ export class AudioRecorder {
         this.supportedMimeType = this.mediaRecorderMimeTypes.filter((type) => { return MediaRecorder.isTypeSupported(type) })
 
         if (this.supportedMimeType.length === 0) {
-            alert('Mime type not supported!');
+            alert('Mime type not supported!!');
             return;
         }
 
-        this.canvas = document.getElementById('audio-wave')
-        this.init().then(() => this.registerEvents())
-
+        this.gainNode = null;
+        this.noiseCancellation = false;
+        this.canvas = document.getElementById('audio-wave');
+        // this.init().then(() => this.registerEvents())
     }
 
-    async init() {
-        return navigator.mediaDevices.getUserMedia({ audio: true })
-            .then((stream) => this.handleGetUserMedia(stream))
-            .then(() => this.getEnumerateDevices())
+    async init(deviceId) {
+        console.log(deviceId);
+        return navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                deviceId: { exact: deviceId }
+            }
+        })
+            .then((stream) => this.handleStream(stream))
+            // .then(() => this.handleStartRecording())
             .catch((error) => {
                 console.error(error?.message)
                 alert(error?.message)
             });
     }
 
-    async getEnumerateDevices() {
-        return navigator.mediaDevices.enumerateDevices()
-            .then((devices) => this.populateDeviceMenus(devices))
-    }
-
-    registerEvents() { //register events to start and stop recording
-        // document.getElementById('start-audio-recording').addEventListener('click', this.handleStartRecording.bind(this))
-        // document.getElementById('stop-audio-recording').addEventListener('click', this.handleStopRecording.bind(this))
-    }
-
-    handleGetUserMedia(stream) {
+    //handle the stream generated from media devices
+    handleStream(stream) {
+        this.stream = stream;
+        console.log(stream)
         const options = {
             mimeType: this.supportedMimeType,
             audioBitsPerSecond: 128000
@@ -58,23 +66,119 @@ export class AudioRecorder {
         this.mediaRecorder.onstop = this.handleMediaRecorderStop.bind(this)
         this.mediaRecorder.ondataavailable = this.handleRecorderChunks.bind(this)
 
-        this.setupCanvasVisualizer(stream)
+        this.setupCanvasVisualizer()
     }
 
-    setupCanvasVisualizer(stream) {
+    clearRecordedData() {
+        // this.recordedChunks = [];
+        console.log('old record data cleared')
+    }
 
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const analyser = audioContext.createAnalyser();
+    //handle user start recording interaction
+    handleStartRecording(event) {
+        this.clearRecordedData();
+        this.mediaRecorder.start(10)
+        console.log(event, 'starting recording')
+    }
+
+    //handle user stop recording interaction
+    handleStopRecording(event) {
+        console.log('recording stop')
+        this.mediaRecorder.stop()
+        console.log(event, 'stopping recording')
+    }
+
+    //Push the chunks to array when available using ondataavailable event of MediaRecorder interface.
+    handleRecorderChunks(event) {
+        this.recordedChunks.push(event.data)
+        console.log(event, 'chunks')
+    }
+
+    handleMediaRecorderStart(event) { //handle media recorder start
+        console.log(event, 'recording started')
+    }
+
+    //handle recording stop and generate the new HTML audio element to stream the recorded media and append it to DOM.
+    handleMediaRecorderStop(stream) {
+        App.openModal()
+            .then((clipName) => {
+                const mainContainer = document.querySelector("#main-container");
+
+                const clipContainer = document.createElement("div");
+                clipContainer.className = "bg-white rounded-lg shadow-md p-4 mb-4 transition-all hover:shadow-lg";
+
+                const clipHeader = document.createElement("div");
+                clipHeader.className = "flex justify-between items-center mb-2";
+
+                const clipLabel = document.createElement("h3");
+                clipLabel.className = "text-lg font-semibold text-gray-800";
+                clipLabel.textContent = clipName;
+
+                const deleteButton = document.createElement("button");
+                deleteButton.className = "text-red-500 hover:text-red-700 focus:outline-none transition-colors";
+                deleteButton.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            `;
+
+                clipHeader.appendChild(clipLabel);
+                clipHeader.appendChild(deleteButton);
+
+                const audio = document.createElement("audio");
+                audio.className = "w-full mt-2";
+                audio.setAttribute("controls", "");
+
+                clipContainer.appendChild(clipHeader);
+                clipContainer.appendChild(audio);
+
+                mainContainer.prepend(clipContainer);
+
+                const blob = new Blob(this.recordedChunks, { type: 'audio/wav' });
+                const audioURL = URL.createObjectURL(blob);
+                audio.src = audioURL;
+
+                console.log("recorder stopped");
+
+                deleteButton.onclick = (e) => {
+                    const clipToRemove = e.target.closest('.bg-white');
+                    clipToRemove.classList.add('scale-95', 'opacity-0');
+                    setTimeout(() => {
+                        mainContainer.removeChild(clipToRemove);
+                    }, 300);
+                };
+            })
+    }
+
+    setVolume(level) {
+        if (this.gainNode) {
+            this.gainNode.gain.setValueAtTime(level, this.audioContext.currentTime);
+        }
+    }
+
+    toggleNoiseCancellation() {
+        this.noiseCancellation = !this.noiseCancellation;
+        // Implement noise cancellation logic here
+    }
+
+    //display sine wave when audio is input
+    setupCanvasVisualizer() {
+        const audioContent = this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 2048;
+
+        // Create a gain node for volume control
+        this.gainNode = this.audioContext.createGain();
 
         // Source node from the stream
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
+        this.sourceNode = this.audioContext.createMediaStreamSource(this.stream);
+        this.sourceNode.connect(this.analyser);
 
         // Assuming you have a canvas element referenced by this.canvas
         const canvasCtx = this.canvas.getContext('2d');
 
-        analyser.fftSize = 256; // Adjust for frequency resolution
-        const bufferLength = analyser.frequencyBinCount;
+        const bufferLength = this.analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
         const WIDTH = this.canvas.width;
@@ -83,7 +187,7 @@ export class AudioRecorder {
         const drawVisualizer = () => {
             requestAnimationFrame(drawVisualizer);
 
-            analyser.getByteTimeDomainData(dataArray);
+            this.analyser.getByteTimeDomainData(dataArray);
 
             canvasCtx.fillStyle = 'rgb(200, 200, 200)';
             canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -115,108 +219,41 @@ export class AudioRecorder {
         drawVisualizer(); // Start the visualization
     }
 
-    handleStartRecording(event) { //handle start recording button event
-        this.mediaRecorder.start()
-        console.log(event, 'starting recording')
-    }
+    async changeAudioInputDevice(deviceId) {
+        console.log(deviceId)
+        console.log(this.recordedChunks)
+        // if (this.stream) {
+        //     this.stream.getTracks().forEach(track => track.stop());
+        // }
+        const newStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId } } });
+        this.stream = newStream;
+        // // Reconnect the new stream to the audio context
+        // const source = this.audioContext.createMediaStreamSource(newStream);
+        // source.connect(this.analyser);
 
-    handleStopRecording(event) { //handle stop recording button event
-        this.mediaRecorder.stop()
-        console.log(event, 'stopping recording')
-    }
+        const oldSourceNode = this.sourceNode;
 
-    handleRecorderChunks(event) { //handle recorder media chunks
-        this.recordedChunks.push(event.data)
-        console.log(event, 'chunks')
-    }
+        this.sourceNode = this.audioContext.createMediaStreamSource(newStream);
+        this.sourceNode.connect(this.analyser);
 
-    handleMediaRecorderStart(event) { //handle media recorder start
-        console.log(event, 'recording started')
-    }
+        // Update the stream for the recorder without stopping it
+        const audioTrack = newStream.getAudioTracks()[0];
+        this.stream.removeTrack(this.stream.getAudioTracks()[0]);
+        this.stream.addTrack(audioTrack);
 
-    handleMediaRecorderStop(stream) {
-        console.log(stream, 'recording stopped');
+        // If we're currently recording, we need to handle the transition
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+            // Temporarily pause recording
+            this.mediaRecorder.pause();
 
-        const clipName = prompt("Enter a name for your sound clip") || 'Untitled Clip';
+            // Create a new MediaRecorder with the updated stream
+            await this.init(deviceId);
 
-        const mainContainer = document.querySelector("#main-container");
-
-        const clipContainer = document.createElement("div");
-        clipContainer.className = "bg-white rounded-lg shadow-md p-4 mb-4 transition-all hover:shadow-lg";
-
-        const clipHeader = document.createElement("div");
-        clipHeader.className = "flex justify-between items-center mb-2";
-
-        const clipLabel = document.createElement("h3");
-        clipLabel.className = "text-lg font-semibold text-gray-800";
-        clipLabel.textContent = clipName;
-
-        const deleteButton = document.createElement("button");
-        deleteButton.className = "text-red-500 hover:text-red-700 focus:outline-none transition-colors";
-        deleteButton.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-          </svg>
-        `;
-
-        clipHeader.appendChild(clipLabel);
-        clipHeader.appendChild(deleteButton);
-
-        const audio = document.createElement("audio");
-        audio.className = "w-full mt-2";
-        audio.setAttribute("controls", "");
-
-        clipContainer.appendChild(clipHeader);
-        clipContainer.appendChild(audio);
-
-        mainContainer.appendChild(clipContainer);
-
-        const blob = new Blob(this.recordedChunks, { type: this.supportedMimeType });
-        this.recordedChunks = [];
-        const audioURL = URL.createObjectURL(blob);
-        audio.src = audioURL;
-
-        console.log("recorder stopped");
-
-        deleteButton.onclick = (e) => {
-            const clipToRemove = e.target.closest('.bg-white');
-            clipToRemove.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                mainContainer.removeChild(clipToRemove);
-            }, 300); // Match this with the transition duration
-        };
-    }
-
-    populateDeviceMenus(devices) {
-        const audioMenu = document.getElementsByClassName("inputAudioDevice");
-        const videoMenu = document.getElementsByClassName("inputVideoDevice");
-        if (!audioMenu) {
-            console.warn('One or more menu elements are missing from the DOM');
-            return;
+            // Resume recording with the new recorder
+            this.mediaRecorder.start();
+            console.log(this.recordedChunks)
         }
 
-        devices.forEach(device => {
-            switch (device.kind) {
-                case 'audioinput':
-                    for (const [key, menu] of Object.entries(audioMenu)) {
-                        this.createDeviceOption(device, menu)
-                    }
-                    break;
-                case 'videoinput':
-                    for (const [key, menu] of Object.entries(videoMenu)) {
-                        this.createDeviceOption(device, menu)
-                    }
-                    break;
-                default:
-                    console.log(device.label)
-            }
-        })
-    }
-
-    createDeviceOption(device, menu) {
-        const option = document.createElement("option");
-        option.textContent = device.label || `Device ${device.deviceId}`;
-        option.value = device.deviceId;
-        menu.appendChild(option);
+        oldSourceNode.disconnect();
     }
 }

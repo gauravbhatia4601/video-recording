@@ -1,3 +1,9 @@
 change video script structure
 don't allow to switch the tab when recording
 use same record and stop button
+
+when switching the tabs remove the current stream 
+and start a new one. ---DONE
+
+make it in separation so the media devices don't get 
+conflicted with each other ----DONE
