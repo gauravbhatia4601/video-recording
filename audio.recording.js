@@ -12,7 +12,8 @@ export class AudioRecorder {
         'audio/ogg;codecs=opus',
         "audio/webm;codecs=opus",
         "audio/wav",
-        "audio/mpeg"
+        "audio/mpeg",
+        "audio/mp4",
     ];
 
     constructor() {
