@@ -71,7 +71,7 @@ export class AudioRecorder {
     }
 
     clearRecordedData() {
-        // this.recordedChunks = [];
+        this.recordedChunks = [];
         console.log('old record data cleared')
     }
 
@@ -220,38 +220,46 @@ export class AudioRecorder {
         drawVisualizer(); // Start the visualization
     }
 
-    async changeAudioInputDevice(deviceId) {
+    async changeInputDevice(deviceId) {
         console.log(deviceId)
         console.log(this.recordedChunks)
+
+        const currentState = this.mediaRecorder?.state || null
+        // Temporarily pause recording
+        if (currentState === 'recording') {
+            this.mediaRecorder.pause();
+        } else {
+            return;
+        }
+
+        //stop all the tracks in stream
         // if (this.stream) {
         //     this.stream.getTracks().forEach(track => track.stop());
         // }
+
+        //capture new stream
         const newStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId } } });
         this.stream = newStream;
-        // // Reconnect the new stream to the audio context
-        // const source = this.audioContext.createMediaStreamSource(newStream);
-        // source.connect(this.analyser);
 
         const oldSourceNode = this.sourceNode;
 
+        // Reconnect the new stream to the audio context
         this.sourceNode = this.audioContext.createMediaStreamSource(newStream);
         this.sourceNode.connect(this.analyser);
 
-        // Update the stream for the recorder without stopping it
+        // // Update the stream for the recorder without stopping it
         const audioTrack = newStream.getAudioTracks()[0];
         this.stream.removeTrack(this.stream.getAudioTracks()[0]);
         this.stream.addTrack(audioTrack);
 
         // If we're currently recording, we need to handle the transition
-        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-            // Temporarily pause recording
-            this.mediaRecorder.pause();
+        if (currentState === 'recording') {
 
             // Create a new MediaRecorder with the updated stream
             await this.init(deviceId);
 
             // Resume recording with the new recorder
-            this.mediaRecorder.start();
+            this.mediaRecorder.start(10);
             console.log(this.recordedChunks)
         }
 

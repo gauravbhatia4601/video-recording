@@ -7,20 +7,26 @@ import { VideoRecorder } from './video.js';
 
 class App {
     constructor() {
-        this.accessMediaDevice = new AccessMediaDevice();
-        this.audioRecorder = new AudioRecorder();
-        this.indexDB = new indexDB();
-        this.utility = new Utility();
-        // this.videoRecorder = new videoRecorder();
-        this.videoRecorder = new VideoRecorder();
         this.recorderMode = 'video';
         this.elements = {};
         this.state = '';
         this.init();
     }
 
-    init() {
+    async init() {
         this.registerEvents()
+
+        this.accessMediaDevice = new AccessMediaDevice();
+
+        await this.accessMediaDevice.getEnumerateDevices();
+
+        this.audioRecorder = new AudioRecorder();
+
+        this.indexDB = new indexDB();
+
+        this.utility = new Utility();
+
+        this.videoRecorder = new VideoRecorder(this.getVideoInputs());
     }
 
     registerEvents() { //register events for switching the tabs
@@ -41,10 +47,18 @@ class App {
         });
     }
 
+    getVideoInputs() {
+        return {
+            videoId: this.elements.inputVideoDevice.value,
+            audioId: this.elements.inputAudioDevice.value
+        };
+    }
+
     addTabEventListeners() {
         this.elements.videoTab.addEventListener('click', () => this.handleTabSwitch('video'));
         this.elements.audioTab.addEventListener('click', () => this.handleTabSwitch('audio'));
-        this.elements.inputAudioDevice.addEventListener('change', (event) => this.handleAudioInputSwitch(event))
+        this.elements.inputAudioDevice.addEventListener('change', (event) => this.handleInputSwitch(event, 'audioInput'))
+        this.elements.inputVideoDevice.addEventListener('change', (event) => this.handleInputSwitch(event, 'videoInput'))
     }
 
     handleTabSwitch(mode) {
@@ -57,9 +71,10 @@ class App {
 
         if (isVideo) {
             this.stopStream(this.audioRecorder.stream); //stop audio stream
-            this.videoRecorder.init()
+            this.videoRecorder.init() //initialize video stream
         } else {
-            this.videoRecorder.clearVideoSource()
+            this.videoRecorder.clearVideoSource(); //stop video stream
+            console.log(this.elements.inputAudioDevice.value)
             this.audioRecorder.init(this.elements.inputAudioDevice.value); //initialize the audio stream
         }
     }
@@ -151,21 +166,19 @@ class App {
         })
     }
 
-    handleAudioInputSwitch(event) {
+    handleInputSwitch(event, inputType) {
         const deviceId = event.target?.value;
 
         if (!deviceId) return;
 
-        if (this.recorderMode === 'audio') {
-            this.audioRecorder.changeAudioInputDevice(deviceId)
-        }
+        const recorder = inputType == 'audioInput' && this.recorderMode == 'audio' ? this.audioRecorder : this.videoRecorder;
+
+        recorder.changeInputDevice(deviceId, inputType)
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new App();
-    const modal = document.getElementById('modal');
-    const modalOverlay = document.getElementById('modalOverlay');
 });
 
 export { App };

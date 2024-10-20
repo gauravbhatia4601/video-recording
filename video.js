@@ -5,19 +5,19 @@ import { RecorderType } from './RecorderType.js';
 import { Utility } from './Utility.js';
 
 export class VideoRecorder {
-    stream = null
+
+    stream = null;
 
     constructor() {
-        this.initializeVariables()
+        this.initializeVariables();
         this.canvas = new Canvas(this.recordingPlayer);
-        this.recorderType = new RecorderType()
-        this.init()
+        this.recorderType = new RecorderType();
+        this.init();
     }
 
     initializeVariables() {
-        this.startRecording = document.querySelector('#start-recording-btn');
-        this.stopRecording = document.querySelector('#stop-recording-btn');
-        this.saveRecording = document.querySelector('.save-recording-btn');
+        this.inputVideoDevice = document.getElementById('inputVideoDevice');
+        this.inputAudioDevice = document.getElementById('inputAudioDevice');
         this.recordingPlayer = document.createElement('video');
         this.recordingPlayer.addEventListener('play', this.startCanvasDrawing.bind(this));
         this.recordingPlayer.addEventListener('stop', this.stopCanvasDrawing.bind(this));
@@ -25,15 +25,22 @@ export class VideoRecorder {
             video: {
                 width: 1280,
                 height: 720,
-                facingMode: 'user'
+                facingMode: 'user',
+                // deviceId: document.getElementById('inputVideoDevice').value
+                deviceId: { exact: this.inputVideoDevice.value || null }
             },
-            audio: true
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                deviceId: { exact: this.inputAudioDevice.value || null }
+            }
         }
-
     }
 
     async init() {
         try {
+            console.log(this.videoConstraints)
             // Capture user media
             const stream = await this.captureUserMedia();
 
@@ -49,11 +56,6 @@ export class VideoRecorder {
             // // Capture stream from canvas and update the stream
             const canvasStream = await this.canvas.captureCanvasStream(this.stream);
             this.stream = canvasStream;
-
-            // Use requestAnimationFrame for smoother updates instead of requestVideoFrameCallback
-            // which might not be supported everywhere or might be deprecated in future
-            // this.startCanvasDrawing();
-
         } catch (e) {
             this.handleError(e)
         }
@@ -68,7 +70,7 @@ export class VideoRecorder {
         this.canvas.isDrawing = false;
     }
 
-    captureUserMedia() {
+    async captureUserMedia() {
         return new Promise((resolve, reject) => {
             navigator.mediaDevices.getUserMedia(this.videoConstraints)
                 .then(async stream => {
@@ -77,16 +79,10 @@ export class VideoRecorder {
                 .catch(error => {
                     reject(error);
                 });
+        }).catch((reason) => {
+            throw reason;
         });
     }
-
-    // startCanvasDrawing() {
-    //     const draw = () => {
-    //         this.canvas.drawCanvas();
-    //         this.recordingPlayer.requestVideoFrameCallback(draw);
-    //     };
-    //     this.recordingPlayer.requestVideoFrameCallback(draw);
-    // }
 
     handleError(error) {
         console.error('Error accessing media devices:', error);
@@ -108,22 +104,6 @@ export class VideoRecorder {
         this.recordingPlayer.srcObject = null;
     }
 
-    //event listener for start recording
-    async startVideoRecording(event) {
-
-        if (!this.mediaRecorder) {
-            this.setupMediaRecord()
-        } else {
-            this.mediaRecorder.clearRecordedData()
-            // this.mediaRecorder.record()
-        }
-
-        console.log(this.mediaRecorder)
-
-        //start recording
-        this.mediaRecorder.record();
-    }
-
     async setupMediaRecord() {
 
         this.recorder = MediaStreamRecorder; //await this.recorderType.getRecorderType(this.stream, this.config) || MediaStreamRecorder;
@@ -141,6 +121,21 @@ export class VideoRecorder {
 
         // button.mediaCapturedCallback = function () {
         this.mediaRecorder = new this.recorder(this.stream, this.config)
+    }
+
+    //event listener for start recording
+    async startVideoRecording() {
+
+        if (!this.mediaRecorder) {
+            this.setupMediaRecord()
+        } else {
+            this.mediaRecorder.clearRecordedData()
+        }
+
+        console.log(this.mediaRecorder)
+
+        //start recording
+        this.mediaRecorder.record();
     }
 
     stopVideoRecording() {
@@ -167,6 +162,90 @@ export class VideoRecorder {
 
                 this.handleStopRecording(recordedBlob)
             })
+    }
+
+    async changeInputDevice(deviceId, inputType) {
+        console.log(deviceId, inputType)
+        if (inputType === 'audioInput') {
+            this.handleAudioInputChange(deviceId)
+        } else {
+            this.handleVideoInputChange(deviceId)
+        }
+    }
+
+    async handleAudioInputChange(deviceId) {
+        //update the video constraints
+        const oldVideoConstraints = this.videoConstraints.video;
+
+        this.videoConstraints.audio.deviceId = { exact: deviceId };
+        this.videoConstraints.video = false;
+
+        const currentState = this.mediaRecorder?.getState();
+
+        console.log(currentState)
+
+        //if recorder is in recording state
+        if (currentState === 'recording') {
+            console.log('recording paused')
+            this.mediaRecorder.pause();
+        }
+
+        //Save the current video track
+        const videoTrack = this.stream.getVideoTracks()[0];
+
+        //Stop the current stream
+        // this.stream.getTracks().forEach(track => track.stop());
+
+        //capture new stream with updated video constraints
+        const newStream = await this.captureUserMedia()
+
+        newStream.addTrack(videoTrack);
+
+        this.stream = newStream;
+
+        this.videoConstraints.video = oldVideoConstraints
+
+        if (currentState === 'recording') {
+            console.log('recording started again')
+            await this.setupMediaRecord()
+            this.startVideoRecording()
+            console.log(this.mediaRecorder?.getState())
+        }
+    }
+
+    async handleVideoInputChange(deviceId) {
+
+        const oldAudioConstraints = this.videoConstraints.audio;
+        //update the video constraints
+        this.videoConstraints.video.deviceId = { exact: deviceId };
+        this.videoConstraints.audio = false;
+
+        const currentState = this.mediaRecorder?.getState() || null;
+
+        //if recorder is in recording state
+        if (currentState === 'recording') {
+            this.mediaRecorder.pause();
+        }
+
+        //Save the current video track
+        const audioTrack = this.stream.getAudioTracks()[0];
+
+        //Stop the current stream
+        this.stream.getTracks().forEach(track => track.stop());
+
+        //capture new stream with updated video constraints
+        const newStream = await this.captureUserMedia()
+
+        newStream.addTrack(audioTrack);
+
+        this.stream = newStream;
+
+        this.videoConstraints.audio = oldAudioConstraints
+
+        if (currentState === 'recording') {
+            this.init()
+            this.startVideoRecording()
+        }
     }
 
     handleStopRecording(blob) {

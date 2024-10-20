@@ -1,6 +1,6 @@
 export class AccessMediaDevice {
     constructor() {
-        this.getEnumerateDevices()
+        // this.getEnumerateDevices()
         this.registerEvents()
         this.audioMenu = document.getElementById("inputAudioDevice");
         this.videoMenu = document.getElementById("inputVideoDevice");
@@ -41,6 +41,7 @@ export class AccessMediaDevice {
     }
 
     createDeviceOption(device, menu) {
+        if (device.deviceId == 'default') return;
         const option = document.createElement("option");
         option.textContent = device.label || `Device ${device.deviceId}`;
         option.value = device.deviceId;
