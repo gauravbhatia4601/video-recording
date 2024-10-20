@@ -11,7 +11,8 @@ export class AudioRecorder {
     mediaRecorderMimeTypes = [
         'audio/ogg;codecs=opus',
         "audio/webm;codecs=opus",
-        "audio/wav"
+        "audio/wav",
+        "audio/mpeg"
     ];
 
     constructor() {
