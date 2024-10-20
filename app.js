@@ -16,17 +16,20 @@ class App {
     async init() {
         this.registerEvents()
 
-        this.accessMediaDevice = new AccessMediaDevice();
-
-        await this.accessMediaDevice.getEnumerateDevices();
-
-        this.audioRecorder = new AudioRecorder();
-
         this.indexDB = new indexDB();
 
         this.utility = new Utility();
 
-        this.videoRecorder = new VideoRecorder(this.getVideoInputs());
+        this.accessMediaDevice = new AccessMediaDevice();
+
+        await this.accessMediaDevice.getEnumerateDevices()
+        // .then(() => {
+
+        this.audioRecorder = new AudioRecorder();
+
+        this.videoRecorder = new VideoRecorder();
+        // })
+
     }
 
     registerEvents() { //register events for switching the tabs

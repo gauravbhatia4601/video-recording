@@ -7,7 +7,11 @@ export class AccessMediaDevice {
     }
 
     async getEnumerateDevices() {
-        return navigator.mediaDevices.enumerateDevices()
+        // First, get user media
+        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+
+        // Then enumerate devices
+        await navigator.mediaDevices.enumerateDevices()
             .then((devices) => this.populateDeviceMenus(devices))
             .catch(err => {
                 console.error('Error enumerating devices:', err);
@@ -19,6 +23,7 @@ export class AccessMediaDevice {
     }
 
     populateDeviceMenus(devices) {
+        console.log(devices)
         if (!this.audioMenu) {
             console.warn('One or more menu elements are missing from the DOM');
             return;

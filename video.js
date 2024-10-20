@@ -18,6 +18,7 @@ export class VideoRecorder {
     initializeVariables() {
         this.inputVideoDevice = document.getElementById('inputVideoDevice');
         this.inputAudioDevice = document.getElementById('inputAudioDevice');
+        console.log(this.inputVideoDevice)
         this.recordingPlayer = document.createElement('video');
         this.recordingPlayer.addEventListener('play', this.startCanvasDrawing.bind(this));
         this.recordingPlayer.addEventListener('stop', this.stopCanvasDrawing.bind(this));
@@ -48,7 +49,7 @@ export class VideoRecorder {
             this.stream = stream;
 
             // Configure recording player attributes for immediate playback
-            await this.setupRecordingPlayer(stream)
+            await this.setupRecordingPlayer(stream);
 
             // Wait for canvas to be ready with proper sizing
             await this.canvas.setCanvasSize();
