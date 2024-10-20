@@ -113,16 +113,14 @@ export class VideoRecorder {
         this.recordingPlayer.volume = 1;
         this.recordingPlayer.muted = true;
         this.recordingPlayer.playsinline = true;
-        this.recordingPlayer.autoplay = true;
-        return await this.recordingPlayer.play()
-            .then(() => {
-                console.log('Media playback started successfully');
-            })
-            .catch((reason) => {
-                console.error(reason);
-                // Handle the error appropriately, e.g., alert the user
-                alert('Failed to capture media: ' + reason.message);
-            });
+        this.recordingPlayer.autoplay = false;
+        try {
+            await this.recordingPlayer.play();
+            console.log('Media playback started successfully');
+        } catch (error) {
+            console.error('Error playing the recording player:', error);
+            alert('Failed to capture media: ' + error.message);
+        }
     }
 
     clearVideoSource() {
@@ -133,12 +131,29 @@ export class VideoRecorder {
 
     async setupMediaRecord() {
 
+        const utility = new Utility(); // Create an instance of Utility to check the browser
+
+        // Set the MIME type based on the detected browser
+        let mimeType;
+        if (utility.isChrome || utility.isBrave) {
+            mimeType = 'video/webm; codecs=vp9,opus'; // Chrome and Brave support VP9
+        } else if (utility.isFirefox) {
+            mimeType = 'video/webm; codecs=vp8,opus'; // Firefox supports VP8
+        } else if (utility.isSafari) {
+            mimeType = 'video/mp4;'; // Safari supports H.264
+        } else if (utility.isEdge) {
+            mimeType = 'video/webm; codecs=vp9,opus'; // Edge supports VP9
+        } else {
+            mimeType = 'video/webm'; // Default fallback
+        }
+
+
         this.recorder = MediaStreamRecorder; //await this.recorderType.getRecorderType(this.stream, this.config) || MediaStreamRecorder;
 
         this.config = {
             type: 'video',
             disableLogs: false,
-            mimeType: 'video/webm;codecs=vp9,opus',
+            mimeType: mimeType,
             canvas: {
                 width: 1280,
                 height: 720
