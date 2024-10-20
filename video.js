@@ -19,6 +19,8 @@ export class VideoRecorder {
         this.stopRecording = document.querySelector('#stop-recording-btn');
         this.saveRecording = document.querySelector('.save-recording-btn');
         this.recordingPlayer = document.createElement('video');
+        this.recordingPlayer.addEventListener('play', this.startCanvasDrawing.bind(this));
+        this.recordingPlayer.addEventListener('stop', this.stopCanvasDrawing.bind(this));
         this.videoConstraints = {
             video: {
                 width: 1280,
@@ -42,19 +44,28 @@ export class VideoRecorder {
             await this.setupRecordingPlayer(stream)
 
             // Wait for canvas to be ready with proper sizing
-            // await this.canvas.setCanvasSize();
+            await this.canvas.setCanvasSize();
 
             // // Capture stream from canvas and update the stream
-            // const canvasStream = await this.canvas.captureCanvasStream(this.stream);
-            // this.stream = canvasStream;
+            const canvasStream = await this.canvas.captureCanvasStream(this.stream);
+            this.stream = canvasStream;
 
             // Use requestAnimationFrame for smoother updates instead of requestVideoFrameCallback
             // which might not be supported everywhere or might be deprecated in future
-            this.startCanvasDrawing();
+            // this.startCanvasDrawing();
 
         } catch (e) {
             this.handleError(e)
         }
+    }
+
+    startCanvasDrawing() {
+        this.canvas.isDrawing = true;
+        this.canvas.draw();
+    }
+
+    stopCanvasDrawing() {
+        this.canvas.isDrawing = false;
     }
 
     captureUserMedia() {
@@ -69,13 +80,13 @@ export class VideoRecorder {
         });
     }
 
-    startCanvasDrawing() {
-        const draw = () => {
-            this.canvas.drawCanvas();
-            this.recordingPlayer.requestVideoFrameCallback(draw);
-        };
-        this.recordingPlayer.requestVideoFrameCallback(draw);
-    }
+    // startCanvasDrawing() {
+    //     const draw = () => {
+    //         this.canvas.drawCanvas();
+    //         this.recordingPlayer.requestVideoFrameCallback(draw);
+    //     };
+    //     this.recordingPlayer.requestVideoFrameCallback(draw);
+    // }
 
     handleError(error) {
         console.error('Error accessing media devices:', error);

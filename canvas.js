@@ -4,6 +4,9 @@ export class Canvas {
         this.videoCanvas = document.querySelector('#video-canvas');
         this.ctx = this.videoCanvas.getContext('2d');
         this.audioContext, this.audioSource, this.audioDestination = null;
+        this.lastDrawTime = 0;
+        this.isDrawing = false;
+        this.frameInterval = 1000 / 30;
     }
 
     setCanvasSize() {
@@ -38,7 +41,24 @@ export class Canvas {
         })
     }
 
+    draw(timestamp) {
+        if (!this.isDrawing) return;
+
+        if (!timestamp) timestamp = performance.now();
+
+        if (timestamp - this.lastDrawTime >= this.frameInterval) {
+            this.drawCanvas();
+            this.lastDrawTime = timestamp;
+        }
+
+        requestAnimationFrame(this.draw.bind(this));
+    }
+
     async drawCanvas() {
+
+        // Only redraw if the video is actually playing
+        if (this.recordingPlayer.paused || this.recordingPlayer.ended) return;
+
         // Ensure the canvas size is correct
         if (this.videoCanvas.width !== this.recordingPlayer.videoWidth || this.videoCanvas.height !== this.recordingPlayer.videoHeight) {
             await this.setCanvasSize();
