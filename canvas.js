@@ -9,17 +9,19 @@ export class Canvas {
         this.frameInterval = 1000 / 30;
     }
 
-    setCanvasSize() {
+    async setCanvasSize() {
         return new Promise((resolve) => {
             const dpr = window.devicePixelRatio || 1;
             this.videoCanvas.width = this.recordingPlayer.videoWidth * dpr;
             this.videoCanvas.height = this.recordingPlayer.videoHeight * dpr;
             this.ctx.imageSmoothingEnabled = false;
             resolve();
+        }).catch(e => {
+            console.error(e?.message)
         })
     }
 
-    captureCanvasStream(stream) {
+    async captureCanvasStream(stream) {
         return new Promise((resolve, reject) => {
             // Set up audio
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -38,6 +40,8 @@ export class Canvas {
             else {
                 reject('Failed to start stream')
             }
+        }).catch(reason => {
+            console.error(reason);
         })
     }
 
@@ -61,7 +65,10 @@ export class Canvas {
 
         // Ensure the canvas size is correct
         if (this.videoCanvas.width !== this.recordingPlayer.videoWidth || this.videoCanvas.height !== this.recordingPlayer.videoHeight) {
-            await this.setCanvasSize();
+            await this.setCanvasSize().catch(e => {
+                console.error(e);
+                alert('Failed to capture media: ' + e.message);
+            });
         }
         this.ctx.save();
         this.ctx.scale(-1, 1);

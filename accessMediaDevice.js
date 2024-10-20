@@ -8,14 +8,39 @@ export class AccessMediaDevice {
 
     async getEnumerateDevices() {
         // First, get user media
-        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .catch((error) => {
+                console.error('Error in getEnumerateDevices:', error);
+
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    throw new Error('Permission to access media devices was denied. Please grant permission and try again.');
+                } else if (error.name === 'NotFoundError') {
+                    throw new Error('No media devices found. Please ensure a camera and microphone are connected.');
+                } else if (error.name === 'AbortError') {
+                    throw new Error('The operation was aborted. This might be due to a hardware error or a timeout.');
+                } else {
+                    throw new Error('An unexpected error occurred while accessing media devices.');
+                }
+            });
 
         // Then enumerate devices
         await navigator.mediaDevices.enumerateDevices()
             .then((devices) => this.populateDeviceMenus(devices))
-            .catch(err => {
-                console.error('Error enumerating devices:', err);
+            .catch(error => {
+                console.error('Error in getEnumerateDevices:', error);
+
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    throw new Error('Permission to access media devices was denied. Please grant permission and try again.');
+                } else if (error.name === 'NotFoundError') {
+                    throw new Error('No media devices found. Please ensure a camera and microphone are connected.');
+                } else if (error.name === 'AbortError') {
+                    throw new Error('The operation was aborted. This might be due to a hardware error or a timeout.');
+                } else {
+                    throw new Error('An unexpected error occurred while accessing media devices.');
+                }
             });
+
+        return stream;
     }
 
     registerEvents() {

@@ -6,6 +6,7 @@ import { AccessMediaDevice } from './accessMediaDevice.js';
 import { VideoRecorder } from './video.js';
 
 class App {
+    
     constructor() {
         this.recorderMode = 'video';
         this.elements = {};
@@ -23,12 +24,10 @@ class App {
         this.accessMediaDevice = new AccessMediaDevice();
 
         await this.accessMediaDevice.getEnumerateDevices()
-        // .then(() => {
 
         this.audioRecorder = new AudioRecorder();
 
-        this.videoRecorder = new VideoRecorder();
-        // })
+        this.videoRecorder = new VideoRecorder(this.mainStream);
 
     }
 

@@ -8,17 +8,27 @@ export class VideoRecorder {
 
     stream = null;
 
-    constructor() {
-        this.initializeVariables();
-        this.canvas = new Canvas(this.recordingPlayer);
-        this.recorderType = new RecorderType();
-        this.init();
+    constructor(stream) {
+        try {
+            this.stream = stream;
+            this.initializeVariables()
+            this.canvas = new Canvas(this.recordingPlayer);
+            this.recorderType = new RecorderType();
+            this.init()
+                .catch(e => {
+                    console.error(e)
+                    alert('Failed to capture media: ' + e.message);
+                });
+        } catch (e) {
+            console.error(e)
+            alert('Failed to capture media: ' + e.message);
+        }
     }
 
     initializeVariables() {
         this.inputVideoDevice = document.getElementById('inputVideoDevice');
         this.inputAudioDevice = document.getElementById('inputAudioDevice');
-        console.log(this.inputVideoDevice)
+
         this.recordingPlayer = document.createElement('video');
         this.recordingPlayer.addEventListener('play', this.startCanvasDrawing.bind(this));
         this.recordingPlayer.addEventListener('stop', this.stopCanvasDrawing.bind(this));
@@ -27,7 +37,6 @@ export class VideoRecorder {
                 width: 1280,
                 height: 720,
                 facingMode: 'user',
-                // deviceId: document.getElementById('inputVideoDevice').value
                 deviceId: { exact: this.inputVideoDevice.value || null }
             },
             audio: {
@@ -41,24 +50,31 @@ export class VideoRecorder {
 
     async init() {
         try {
-            console.log(this.videoConstraints)
             // Capture user media
+            console.log('captureUserMedia before')
             const stream = await this.captureUserMedia();
-
+            console.log('captureUserMedia')
             // Set the stream to both the recording player and the class property`
             this.stream = stream;
 
+            console.log('setupRecordingPlayer before')
             // Configure recording player attributes for immediate playback
             await this.setupRecordingPlayer(stream);
+
+            console.log('setupRecordingPlayer')
 
             // Wait for canvas to be ready with proper sizing
             await this.canvas.setCanvasSize();
 
+            console.log('setCanvasSize')
+
             // // Capture stream from canvas and update the stream
             const canvasStream = await this.canvas.captureCanvasStream(this.stream);
+            console.log('captureCanvasStream')
             this.stream = canvasStream;
         } catch (e) {
             this.handleError(e)
+            alert('Failed to capture media: ' + e.message);
         }
     }
 
@@ -78,10 +94,12 @@ export class VideoRecorder {
                     resolve(stream);
                 })
                 .catch(error => {
-                    reject(error);
+                    reject(error); // Handle the error here
                 });
         }).catch((reason) => {
-            throw reason;
+            console.error(reason);
+            // Handle the error appropriately, e.g., alert the user
+            alert('Failed to capture media: ' + reason.message);
         });
     }
 
@@ -90,13 +108,21 @@ export class VideoRecorder {
         alert('Could not access the camera or microphone. Please check permissions.');
     }
 
-    setupRecordingPlayer(stream) {
+    async setupRecordingPlayer(stream) {
         this.recordingPlayer.srcObject = stream;
         this.recordingPlayer.volume = 1;
         this.recordingPlayer.muted = true;
         this.recordingPlayer.playsinline = true;
         this.recordingPlayer.autoplay = true;
-        return this.recordingPlayer.play();
+        return await this.recordingPlayer.play()
+            .then(() => {
+                console.log('Media playback started successfully');
+            })
+            .catch((reason) => {
+                console.error(reason);
+                // Handle the error appropriately, e.g., alert the user
+                alert('Failed to capture media: ' + reason.message);
+            });
     }
 
     clearVideoSource() {
@@ -198,7 +224,10 @@ export class VideoRecorder {
         // this.stream.getTracks().forEach(track => track.stop());
 
         //capture new stream with updated video constraints
-        const newStream = await this.captureUserMedia()
+        const newStream = await this.captureUserMedia().catch(e => {
+            console.error(e);
+            alert('Failed to capture media: ' + e.message);
+        });
 
         newStream.addTrack(videoTrack);
 
@@ -235,7 +264,10 @@ export class VideoRecorder {
         this.stream.getTracks().forEach(track => track.stop());
 
         //capture new stream with updated video constraints
-        const newStream = await this.captureUserMedia()
+        const newStream = await this.captureUserMedia().catch(e => {
+            console.error(e);
+            alert('Failed to capture media: ' + e.message);
+        });
 
         newStream.addTrack(audioTrack);
 
