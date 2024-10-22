@@ -1,7 +1,38 @@
 import { Utility } from "./Utility.js";
 
+/*
+|--------------------------------------------------------------------------
+| MediaStreamRecorder Class
+|--------------------------------------------------------------------------
+|
+| This class provides functionality for recording media streams, such as
+| audio and video, using the MediaRecorder API. It handles the initialization
+| of the media stream, configuration of recording options, and management of
+| recorded data. The class includes methods for starting, stopping, pausing,
+| and resuming recordings, as well as handling recorded chunks and managing
+| the state of the recorder. It also includes utility methods for checking
+| the active state of the media stream and retrieving the current recording
+| state.
+|
+| Example usage:
+| const recorder = new MediaStreamRecorder(mediaStream, config);
+| recorder.record();
+| recorder.stop((blob) => {
+|     // Handle the recorded blob
+| });
+|
+*/
 export class MediaStreamRecorder {
-
+    /*
+    |--------------------------------------------------------------------------
+    | Constructor
+    |--------------------------------------------------------------------------
+    |
+    | This constructor initializes the MediaStreamRecorder instance with the
+    | provided media stream and configuration options, setting up necessary
+    | properties and handling browser compatibility checks.
+    |
+    */
     constructor(mediaStream, config = {}) {
 
         if (typeof mediaStream === 'undefined') {
@@ -53,6 +84,16 @@ export class MediaStreamRecorder {
         this.looper();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Set MIME Type
+    |--------------------------------------------------------------------------
+    |
+    | This method sets the MIME type for the media recording based on the
+    | type of media being recorded (audio or video) and the browser's
+    | capabilities.
+    |
+    */
     setMimeType() {
         if (this.config.type === 'audio') {
             if (getTracks(this.mediaStream, 'video').length && getTracks(this.mediaStream, 'audio').length) {
@@ -77,25 +118,28 @@ export class MediaStreamRecorder {
         }
     }
 
-    /**
-     * This method returns array of blobs. Use only with "timeSlice". Its useful to preview recording anytime, without using the "stop" method.
-     * @method
-     * @memberof MediaStreamRecorder
-     * @example
-     * var arrayOfBlobs = recorder.getArrayOfBlobs();
-     * @returns {Array} Returns array of recorded blobs.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Get Array of Blobs
+    |--------------------------------------------------------------------------
+    |
+    | This method returns an array of recorded blobs, useful for previewing
+    | the recording without stopping it.
+    |
+    */
     getArrayOfBlobs() {
         return this.arrayOfBlobs;
     }
 
-    /**
-     * This method records MediaStream.
-     * @method
-     * @memberof MediaStreamRecorder
-     * @example
-     * recorder.record();
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Record
+    |--------------------------------------------------------------------------
+    |
+    | This method starts the recording process for the media stream, setting
+    | up the MediaRecorder and handling various events related to recording.
+    |
+    */
     record() {
         //clear old recorded data
         this.clearRecordedData();
@@ -216,16 +260,15 @@ export class MediaStreamRecorder {
         }
     }
 
-    /**
-     * This method stops recording MediaStream.
-     * @param {function} callback - Callback function, that is used to pass recorded blob back to the callee.
-     * @method
-     * @memberof MediaStreamRecorder
-     * @example
-     * recorder.stop(function(blob) {
-     *     video.src = URL.createObjectURL(blob);
-     * });
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Stop
+    |--------------------------------------------------------------------------
+    |
+    | This method stops the recording process and invokes a callback function
+    | to return the recorded blob to the caller.
+    |
+    */
     stop(callback) {
 
         callback = callback || function () { };
@@ -260,6 +303,15 @@ export class MediaStreamRecorder {
         }
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Recorded Chunks
+    |--------------------------------------------------------------------------
+    |
+    | This method handles the data available event from the MediaRecorder,
+    | pushing recorded chunks into an array for later processing.
+    |
+    */
     handleRecordedChunks(e) {
 
         //when data is available push state to allStates array
@@ -307,13 +359,14 @@ export class MediaStreamRecorder {
         }
     }
 
-    /**
-     * This method pauses the recording process.
-     * @method
-     * @memberof MediaStreamRecorder
-     * @example
-     * recorder.pause();
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Pause
+    |--------------------------------------------------------------------------
+    |
+    | This method pauses the recording process if the MediaRecorder is active.
+    |
+    */
     pause() {
         if (!this.mediaRecorder) {
             return;
@@ -323,13 +376,14 @@ export class MediaStreamRecorder {
         }
     };
 
-    /**
-     * This method resumes the recording process.
-     * @method
-     * @memberof MediaStreamRecorder
-     * @example
-     * recorder.resume();
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Resume
+    |--------------------------------------------------------------------------
+    |
+    | This method resumes the recording process if the MediaRecorder is paused.
+    |
+    */
     resume() {
         if (!this.mediaRecorder) {
             return;
@@ -339,6 +393,15 @@ export class MediaStreamRecorder {
         }
     };
 
+    /*
+    |--------------------------------------------------------------------------
+    | Get MIME Type
+    |--------------------------------------------------------------------------
+    |
+    | This method retrieves the MIME type for the media recorder, falling back
+    | to a default value if none is set.
+    |
+    */
     getMimeType(secondObject) {
         if (this.mediaRecorder && this.mediaRecorder.mimeType) {
             return this.mediaRecorder.mimeType;
@@ -346,6 +409,15 @@ export class MediaStreamRecorder {
         return secondObject.mimeType || 'video/webm';
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Update Timestamp
+    |--------------------------------------------------------------------------
+    |
+    | This method updates the timestamps array with the current time, allowing
+    | for tracking of recording intervals.
+    |
+    */
     updateTimeStamp() {
         this.timestamps.push(new Date().getTime());
         if (typeof this.config.onTimeStamp === 'function') {
@@ -353,13 +425,15 @@ export class MediaStreamRecorder {
         }
     }
 
-    /**
-     * This method resets currently recorded data.
-     * @method
-     * @memberof MediaStreamRecorder
-     * @example
-     * recorder.clearRecordedData();
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Clear Recorded Data
+    |--------------------------------------------------------------------------
+    |
+    | This method resets the recorded data, clearing all blobs and timestamps
+    | from the recorder.
+    |
+    */
     clearRecordedData() {
         if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
             this.stop(this.clearRecordedDataCB);
@@ -367,6 +441,15 @@ export class MediaStreamRecorder {
         this.clearRecordedDataCB();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Clear Recorded Data Callback
+    |--------------------------------------------------------------------------
+    |
+    | This method is a callback function that clears the recorded data and
+    | resets the recorder's state.
+    |
+    */
     clearRecordedDataCB() {
         this.arrayOfBlobs = [];
         this.mediaRecorder = null;
@@ -375,29 +458,28 @@ export class MediaStreamRecorder {
         this.allStates = [];
     }
 
-    /**
-     * Access to native MediaRecorder API
-     * @method
-     * @memberof MediaStreamRecorder
-     * @instance
-     * @example
-     * var internal = recorder.getInternalRecorder();
-     * internal.ondataavailable = function() {}; // override
-     * internal.stream, internal.onpause, internal.onstop, etc.
-     * @returns {Object} Returns internal recording object.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Get Internal Recorder
+    |--------------------------------------------------------------------------
+    |
+    | This method provides access to the internal MediaRecorder API, allowing
+    | for custom handling of events and properties.
+    |
+    */
     getInternalRecorder() {
         return this.mediaRecorder;
     }
 
-    /**
-     * Check if Media stream is active
-     * @method
-     * @memberof MediaStreamRecorder
-     * @example
-     * var isMediaStreamActive = recorder.isMediaStreamActive()
-     * @returns {Boolean}
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Check Media Stream Active
+    |--------------------------------------------------------------------------
+    |
+    | This method checks if the media stream is currently active, returning
+    | a boolean value indicating its status.
+    |
+    */
     isMediaStreamActive() {
         if ('active' in this.mediaStream) {
             if (!this.mediaStream.active) {
@@ -411,14 +493,15 @@ export class MediaStreamRecorder {
         return true;
     }
 
-    /**
-     * Get MediaRecorder readonly state.
-     * @method
-     * @memberof MediaStreamRecorder
-     * @example
-     * var state = recorder.getState();
-     * @returns {String} Returns recording state.
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Get State
+    |--------------------------------------------------------------------------
+    |
+    | This method retrieves the current state of the MediaRecorder, indicating
+    | whether it is recording, paused, or inactive.
+    |
+    */
     getState() {
         if (!this.mediaRecorder) {
             return 'inactive';
@@ -426,21 +509,29 @@ export class MediaStreamRecorder {
         return this.mediaRecorder.state || 'inactive';
     };
 
-    /**
-     * Get MediaRecorder all recording states.
-     * @method
-     * @memberof MediaStreamRecorder
-     * @example
-     * var allStates = recorder.getAllStates();
-     * @returns {Array} Returns all recording states
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | Get All States
+    |--------------------------------------------------------------------------
+    |
+    | This method returns an array of all recorded states, providing a history
+    | of the recording process.
+    |
+    */
     getAllStates() {
         return allStates;
     };
 
 
-    // this method checks if media stream is stopped
-    // or if any track is ended.
+    /*
+    |--------------------------------------------------------------------------
+    | Looper
+    |--------------------------------------------------------------------------
+    |
+    | This method checks if the media stream is stopped or if any track has
+    | ended, stopping the recording if necessary.
+    |
+    */
     looper() {
         if (!this.mediaRecorder || this.config.checkForInactiveTracks === false) {
             return;

@@ -1,12 +1,21 @@
-import { AudioRecorder } from './audio.recording.js'
-import { indexDB } from './indexDb.js'
+import { AudioRecorder } from './audio.recording.js';
+import { indexDB } from './indexDb.js';
 import { Utility } from './Utility.js';
 import { AccessMediaDevice } from './accessMediaDevice.js';
 // import { videoRecorder, startVideoRecording, stopVideoRecording, recordingPlayer } from './video-recording.js'
 import { VideoRecorder } from './video.js';
 
 class App {
-    
+
+    /*
+    |--------------------------------------------------------------------------
+    | Constructor
+    |--------------------------------------------------------------------------
+    |
+    | This constructor initializes the App instance, setting up the recorder mode,
+    | elements, and application state, and calls the initialization method.
+    |
+    */
     constructor() {
         this.recorderMode = 'video';
         this.elements = {};
@@ -14,8 +23,18 @@ class App {
         this.init();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Initialize
+    |--------------------------------------------------------------------------
+    |
+    | This asynchronous method initializes the application by registering events,
+    | setting up the indexDB, utility, access media device, and creating instances
+    | of audio and video recorders.
+    |
+    */
     async init() {
-        this.registerEvents()
+        this.registerEvents();
 
         this.indexDB = new indexDB();
 
@@ -31,6 +50,15 @@ class App {
 
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Register Events
+    |--------------------------------------------------------------------------
+    |
+    | This method registers event listeners for switching tabs and handling
+    | control events for recording.
+    |
+    */
     registerEvents() { //register events for switching the tabs
 
         this.initializeElements();
@@ -38,6 +66,15 @@ class App {
         this.handleControlEvents();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Initialize Elements
+    |--------------------------------------------------------------------------
+    |
+    | This method initializes the UI elements by retrieving them from the DOM
+    | and storing them in the elements object for easy access.
+    |
+    */
     initializeElements() {
         console.log(this.elements)
         const ids = [
@@ -59,10 +96,19 @@ class App {
     addTabEventListeners() {
         this.elements.videoTab.addEventListener('click', () => this.handleTabSwitch('video'));
         this.elements.audioTab.addEventListener('click', () => this.handleTabSwitch('audio'));
-        this.elements.inputAudioDevice.addEventListener('change', (event) => this.handleInputSwitch(event, 'audioInput'))
-        this.elements.inputVideoDevice.addEventListener('change', (event) => this.handleInputSwitch(event, 'videoInput'))
+        this.elements.inputAudioDevice.addEventListener('change', (event) => this.handleInputSwitch(event, 'audioInput'));
+        this.elements.inputVideoDevice.addEventListener('change', (event) => this.handleInputSwitch(event, 'videoInput'));
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Tab Switch
+    |--------------------------------------------------------------------------
+    |
+    | This method handles the switching between video and audio recording modes,
+    | updating the UI and initializing the appropriate media streams.
+    |
+    */
     handleTabSwitch(mode) {
         const isVideo = mode === 'video';
         this.recorderMode = mode;
@@ -108,6 +154,15 @@ class App {
         }
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Control Events
+    |--------------------------------------------------------------------------
+    |
+    | This method sets up event listeners for the start and stop recording buttons,
+    | enabling the user to control the recording process.
+    |
+    */
     handleControlEvents() {
         this.startRecordingButton = document.getElementById('start-recording-btn');
         this.startRecordingButton.addEventListener('click', this.handleRecordingStart.bind(this));
@@ -116,13 +171,22 @@ class App {
         this.stopRecordingButton.addEventListener('click', this.handleRecordingStop.bind(this));
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Recording Start
+    |--------------------------------------------------------------------------
+    |
+    | This method handles the start of the recording process, updating the UI
+    | and invoking the appropriate recording method based on the current mode.
+    |
+    */
     handleRecordingStart(event) {
         this.startRecordingButton.disabled = true;
         this.startRecordingButton.classList.add('hidden', 'cursor-not-allowed');
 
         this.stopRecordingButton.disabled = false;
         this.stopRecordingButton.classList.remove('hidden', 'cursor-not-allowed');
-        console.log(`recording ${this.recorderMode} =====>>>>>`)
+        
         if (this.recorderMode == 'audio') {
             this.audioRecorder.handleStartRecording(event)
         } else {
@@ -130,7 +194,17 @@ class App {
         }
     }
 
-    handleRecordingStop(event) {
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Recording Stop
+    |--------------------------------------------------------------------------
+    |
+    | This asynchronous method handles the stopping of the recording process,
+    | updating the UI and invoking the appropriate stop method based on the
+    | current mode.
+    |
+    */
+    async handleRecordingStop(event) {
 
         this.stopRecordingButton.disabled = true;
         this.stopRecordingButton.classList.add('hidden', 'cursor-not-allowed');
@@ -140,11 +214,20 @@ class App {
         if (this.recorderMode == 'audio') {
             this.audioRecorder.handleStopRecording(event)
         } else {
-            this.videoRecorder.stopVideoRecording(event)
+            await this.videoRecorder.stopVideoRecording(event)
             this.videoRecorder.init()
         }
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Open Modal
+    |--------------------------------------------------------------------------
+    |
+    | This static method opens a modal dialog for user input, returning a promise
+    | that resolves with the input value when the modal is closed.
+    |
+    */
     static openModal() {
         return new Promise((resolve, reject) => {
             const input = document.getElementById('clipName')
@@ -168,6 +251,15 @@ class App {
         })
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Input Switch
+    |--------------------------------------------------------------------------
+    |
+    | This method handles the switching of input devices for audio or video,
+    | updating the recorder with the new device ID.
+    |
+    */
     handleInputSwitch(event, inputType) {
         const deviceId = event.target?.value;
 

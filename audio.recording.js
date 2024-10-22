@@ -2,20 +2,134 @@
 
 import { App } from './app.js'
 
+/*
+|--------------------------------------------------------------------------
+| AudioRecorder Class
+|--------------------------------------------------------------------------
+|
+| This class provides functionality for recording audio using the MediaRecorder
+| API. It manages the audio input stream, handles recording operations, and
+| processes recorded audio data. The class includes methods for starting and
+| stopping recordings, managing audio visualizations, and changing input devices.
+| It also provides utilities for handling recorded audio chunks and controlling
+| audio playback.
+|
+| Example usage:
+| const audioRecorder = new AudioRecorder();
+| audioRecorder.init(deviceId);
+| audioRecorder.handleStartRecording(event);
+| audioRecorder.handleStopRecording(event);
+|
+*/
+
 export class AudioRecorder {
 
-    stream = null
+    /*
+    |--------------------------------------------------------------------------
+    | Stream
+    |--------------------------------------------------------------------------
+    |
+    | This property holds the media stream for recording audio from the user's
+    | microphone or other audio input devices.
+    |
+    */
+    stream = null;
 
-    audioContext = null
+    /*
+    |--------------------------------------------------------------------------
+    | Audio Context
+    |--------------------------------------------------------------------------
+    |
+    | This property holds the AudioContext instance used for processing audio
+    | data and managing audio nodes for visualization and effects.
+    |
+    */
+    audioContext = null;
 
+    /*
+    |--------------------------------------------------------------------------
+    | Supported MIME Types
+    |--------------------------------------------------------------------------
+    |
+    | This array contains the MIME types supported for audio recording, allowing
+    | the class to select the appropriate format based on browser capabilities.
+    |
+    */
     mediaRecorderMimeTypes = [
         'audio/ogg;codecs=opus',
         "audio/webm;codecs=opus",
         "audio/wav",
         "audio/mpeg",
-        "audio/mp4",
+        "audio/mp4"
     ];
 
+    /*
+    |--------------------------------------------------------------------------
+    | Recorded Chunks
+    |--------------------------------------------------------------------------
+    |
+    | This array holds the chunks of audio data recorded during the recording
+    | session, which can be processed and converted into a Blob for playback.
+    |
+    */
+    recordedChunks = [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Supported MIME Type
+    |--------------------------------------------------------------------------
+    |
+    | This property holds the filtered list of supported MIME types based on
+    | the browser's capabilities, ensuring that the selected format is valid
+    | for recording.
+    |
+    */
+    supportedMimeType = [];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gain Node
+    |--------------------------------------------------------------------------
+    |
+    | This property holds the gain node used for controlling the volume of the
+    | audio output during playback.
+    |
+    */
+    gainNode = null;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Noise Cancellation
+    |--------------------------------------------------------------------------
+    |
+    | This boolean property indicates whether noise cancellation is enabled or
+    | disabled for the audio input stream.
+    |
+    */
+    noiseCancellation = false;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Canvas Element
+    |--------------------------------------------------------------------------
+    |
+    | This property holds a reference to the canvas element used for visualizing
+    | the audio waveform during recording.
+    |
+    */
+    canvas = null;
+
+    /*
+    |--------------------------------------------------------------------------
+    | Constructor
+    |--------------------------------------------------------------------------
+    |
+    | This constructor initializes the AudioRecorder instance, checks for
+    | the availability of media devices, and sets up supported MIME types
+    | for audio recording. It also initializes properties related to audio
+    | processing and visualization.
+    |
+    */
     constructor() {
         this.recordedChunks = [];
         if (!navigator.mediaDevices) {
@@ -24,7 +138,7 @@ export class AudioRecorder {
             return;
         }
 
-        this.supportedMimeType = this.mediaRecorderMimeTypes.filter((type) => { return MediaRecorder.isTypeSupported(type) })
+        this.supportedMimeType = this.mediaRecorderMimeTypes.filter((type) => { return MediaRecorder.isTypeSupported(type) });
 
         if (this.supportedMimeType.length === 0) {
             alert('Mime type not supported!!');
@@ -37,6 +151,15 @@ export class AudioRecorder {
         // this.init().then(() => this.registerEvents())
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Initialize
+    |--------------------------------------------------------------------------
+    |
+    | This asynchronous method initializes the audio recording by requesting
+    | access to the user's audio devices and handling the resulting media stream.
+    |
+    */
     async init(deviceId) {
         console.log(deviceId);
         return navigator.mediaDevices.getUserMedia({
@@ -48,59 +171,118 @@ export class AudioRecorder {
             }
         })
             .then((stream) => this.handleStream(stream))
-            // .then(() => this.handleStartRecording())
             .catch((error) => {
-                console.error(error?.message)
-                alert(error?.message)
+                console.error(error?.message);
+                alert(error?.message);
             });
     }
 
-    //handle the stream generated from media devices
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Stream
+    |--------------------------------------------------------------------------
+    |
+    | This method processes the media stream obtained from the user's audio
+    | devices, setting up the MediaRecorder and initializing the canvas visualizer.
+    |
+    */
     handleStream(stream) {
         this.stream = stream;
-        console.log(stream)
+        console.log(stream);
         const options = {
-            mimeType: this.supportedMimeType,
+            mimeType: Array.isArray(this.supportedMimeType) && this.supportedMimeType.length > 0
+                ? this.supportedMimeType[0]
+                : this.supportedMimeType,
             audioBitsPerSecond: 128000
-        }
-        this.mediaRecorder = new MediaRecorder(stream, options)
-        this.mediaRecorder.onstart = this.handleMediaRecorderStart.bind(this)
-        this.mediaRecorder.onstop = this.handleMediaRecorderStop.bind(this)
-        this.mediaRecorder.ondataavailable = this.handleRecorderChunks.bind(this)
+        };
+        this.mediaRecorder = new MediaRecorder(stream, options);
+        this.mediaRecorder.onstart = this.handleMediaRecorderStart.bind(this);
+        this.mediaRecorder.onstop = this.handleMediaRecorderStop.bind(this);
+        this.mediaRecorder.ondataavailable = this.handleRecorderChunks.bind(this);
 
-        this.setupCanvasVisualizer()
+        this.setupCanvasVisualizer();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Clear Recorded Data
+    |--------------------------------------------------------------------------
+    |
+    | This method clears the previously recorded audio chunks, preparing for
+    | a new recording session.
+    |
+    */
     clearRecordedData() {
         this.recordedChunks = [];
-        console.log('old record data cleared')
+        console.log('old record data cleared');
     }
 
-    //handle user start recording interaction
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Start Recording
+    |--------------------------------------------------------------------------
+    |
+    | This method handles the user's interaction to start recording audio,
+    | clearing any previous recorded data and starting the MediaRecorder.
+    |
+    */
     handleStartRecording(event) {
         this.clearRecordedData();
-        this.mediaRecorder.start(10)
-        console.log(event, 'starting recording')
+        this.mediaRecorder.start(10);
+        console.log(event, 'starting recording');
     }
 
-    //handle user stop recording interaction
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Stop Recording
+    |--------------------------------------------------------------------------
+    |
+    | This method handles the user's interaction to stop recording audio,
+    | stopping the MediaRecorder and processing the recorded audio.
+    |
+    */
     handleStopRecording(event) {
-        console.log('recording stop')
-        this.mediaRecorder.stop()
-        console.log(event, 'stopping recording')
+        console.log('recording stop');
+        this.mediaRecorder.stop();
+        console.log(event, 'stopping recording');
     }
 
-    //Push the chunks to array when available using ondataavailable event of MediaRecorder interface.
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Recorder Chunks
+    |--------------------------------------------------------------------------
+    |
+    | This method pushes the recorded audio chunks into an array when data
+    | is available from the MediaRecorder.
+    |
+    */
     handleRecorderChunks(event) {
-        this.recordedChunks.push(event.data)
-        console.log(event, 'chunks')
+        this.recordedChunks.push(event.data);
+        console.log(event, 'chunks');
     }
 
-    handleMediaRecorderStart(event) { //handle media recorder start
-        console.log(event, 'recording started')
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Media Recorder Start
+    |--------------------------------------------------------------------------
+    |
+    | This method handles the event when the MediaRecorder starts recording,
+    | logging the event for debugging purposes.
+    |
+    */
+    handleMediaRecorderStart(event) {
+        console.log(event, 'recording started');
     }
 
-    //handle recording stop and generate the new HTML audio element to stream the recorded media and append it to DOM.
+    /*
+    |--------------------------------------------------------------------------
+    | Handle Media Recorder Stop
+    |--------------------------------------------------------------------------
+    |
+    | This method processes the recorded audio when the MediaRecorder stops,
+    | creating a new audio element and appending it to the DOM for playback.
+    |
+    */
     handleMediaRecorderStop(stream) {
         App.openModal()
             .then((clipName) => {
@@ -149,21 +331,45 @@ export class AudioRecorder {
                         mainContainer.removeChild(clipToRemove);
                     }, 300);
                 };
-            })
+            });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Set Volume
+    |--------------------------------------------------------------------------
+    |
+    | This method sets the volume level of the audio output using the gain node.
+    |
+    */
     setVolume(level) {
         if (this.gainNode) {
             this.gainNode.gain.setValueAtTime(level, this.audioContext.currentTime);
         }
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Toggle Noise Cancellation
+    |--------------------------------------------------------------------------
+    |
+    | This method toggles the noise cancellation feature on or off.
+    |
+    */
     toggleNoiseCancellation() {
         this.noiseCancellation = !this.noiseCancellation;
         // Implement noise cancellation logic here
     }
 
-    //display sine wave when audio is input
+    /*
+    |--------------------------------------------------------------------------
+    | Setup Canvas Visualizer
+    |--------------------------------------------------------------------------
+    |
+    | This method initializes the audio visualizer, creating an audio context
+    | and connecting the audio stream to a canvas for visual representation.
+    |
+    */
     setupCanvasVisualizer() {
         const audioContent = this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -221,11 +427,20 @@ export class AudioRecorder {
         drawVisualizer(); // Start the visualization
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Change Input Device
+    |--------------------------------------------------------------------------
+    |
+    | This asynchronous method changes the input device for audio recording,
+    | updating the media stream and reconnecting the audio context as necessary.
+    |
+    */
     async changeInputDevice(deviceId) {
-        console.log(deviceId)
-        console.log(this.recordedChunks)
+        console.log(deviceId);
+        console.log(this.recordedChunks);
 
-        const currentState = this.mediaRecorder?.state || null
+        const currentState = this.mediaRecorder?.state || null;
         // Temporarily pause recording
         if (currentState === 'recording') {
             this.mediaRecorder.pause();
@@ -233,12 +448,7 @@ export class AudioRecorder {
             return;
         }
 
-        //stop all the tracks in stream
-        // if (this.stream) {
-        //     this.stream.getTracks().forEach(track => track.stop());
-        // }
-
-        //capture new stream
+        // Capture new stream
         const newStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: deviceId } } });
         this.stream = newStream;
 
@@ -248,20 +458,19 @@ export class AudioRecorder {
         this.sourceNode = this.audioContext.createMediaStreamSource(newStream);
         this.sourceNode.connect(this.analyser);
 
-        // // Update the stream for the recorder without stopping it
+        // Update the stream for the recorder without stopping it
         const audioTrack = newStream.getAudioTracks()[0];
         this.stream.removeTrack(this.stream.getAudioTracks()[0]);
         this.stream.addTrack(audioTrack);
 
         // If we're currently recording, we need to handle the transition
         if (currentState === 'recording') {
-
             // Create a new MediaRecorder with the updated stream
             await this.init(deviceId);
 
             // Resume recording with the new recorder
             this.mediaRecorder.start(10);
-            console.log(this.recordedChunks)
+            console.log(this.recordedChunks);
         }
 
         oldSourceNode.disconnect();
