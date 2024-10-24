@@ -144,7 +144,7 @@ class App {
     }
 
     toggleDeviceListVisibility(isVideo) {
-        this.elements.inputVideoDevice.classList.toggle('hidden', !isVideo);
+        // this.elements.inputVideoDevice.classList.toggle('hidden', !isVideo);
     }
 
     stopStream(stream) {
